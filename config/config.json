@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "rw-base-chat-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/rwBaseChat/RwBaseChatWebPart.js",
+          "manifest": "./src/webparts/rwBaseChat/RwBaseChatWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "RwBaseChatWebPartStrings": "lib/webparts/rwBaseChat/loc/{locale}.js"
+  }
+}

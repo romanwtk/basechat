@@ -1,0 +1,240 @@
+@import '~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss';
+
+.rwBaseChat {
+  .container {
+    width: 100%;
+    margin: 0px auto;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+  }
+
+
+  * {
+    color: black;
+  }
+  .row {
+    @include ms-Grid-row;
+    @include ms-fontColor-white;
+    background-color: white;
+    color: black;
+    padding: 20px;
+  }
+
+  .list {
+    color: black;
+    font-family: 'Segoe UI Regular WestEuropean', 'Segoe UI', Tahoma, Arial, sans-serif;
+    background-color: white;
+    font-size: 11px;
+    width: auto;
+    
+  }
+
+  .bubble{
+    width: 60%;
+    height: auto;
+    display: block;
+    background: #f5f5f5;
+    border-radius: 4px;
+    box-shadow: 2px 8px 5px #000;
+    position: relative;
+    margin: 0 0 15px;
+    &.alt{
+      margin: 0 0 15px 30%;
+      background: #e1ffc7;
+    }
+
+    .txt{
+      padding: 8px 10px 8px 14px;
+    
+      .name{
+        font-weight: 600;
+        font-size: 12pt;
+        margin: 0 0 4px;
+        overflow-wrap: anywhere;
+        color: #3498db;
+    
+        span{
+          font-weight: normal;
+          color: #b3b3b3;
+        }
+    
+        &.alt{
+          color: #2ecc71;
+        }
+      }
+
+      .message{
+        font-size: 12pt;
+        margin: 0;
+        color: #2b2b2b;
+      }
+
+      .timestamp{
+        font-size: 11pt;
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        text-transform: uppercase; color: #999
+      }
+    }
+
+    .answer {
+      display: none;
+    }
+    .bubble:hover, .alt:hover {
+      .timestamp .answer {
+        display: inline;
+      }
+    }
+    .bubblearrow {
+      position: absolute;
+      width: 0;
+      bottom:42px;
+      left: -16px;
+      height: 0;
+      &.alt{
+        right: -2px;      
+        bottom: 40px;
+        left: auto;
+      }
+    }
+    .bubblearrow:after {
+      content: "";
+      position: absolute;
+      border: 0 solid transparent;
+      border-top: 9px solid #f5f5f5;
+      border-radius: 0 20px 0;
+      width: 15px;
+      height: 30px;
+      transform: rotate(145deg);
+    }
+    .bubblearrow.alt:after {
+      transform: rotate(45deg) scaleY(-1);
+    }}
+
+  .textarea {
+    border-radius: 50px;
+    padding-top: 4%;
+    font-size: 12pt;
+    padding-left: 4%;
+    height: 32pt;
+    width: 95%;
+  }
+  tr {
+    width: 100%;
+  }
+
+  .emojibarOpen {
+    display: block;
+    text-align: center;
+    width: 100%;
+  }
+  .emojibar {
+    display: none;
+    text-align: center;
+    width: 100%;
+  }
+
+  .emoji {
+    border: none;
+    background: none;
+    padding: 2%;
+    display: inline;
+    font-size: 14pt;
+  }
+
+  .listItem {
+    color: black;
+    vertical-align: center;
+    font-family: 'Segoe UI Regular WestEuropean', 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    box-sizing: border-box;
+    margin-bottom: 1%;
+    padding-left: 1%;
+    line-height: 1.5;
+    box-shadow: none;
+    *zoom: 1;
+    width: 90%;
+    position: relative;
+    background-color: rgb(140, 255, 240);
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .column {
+    @include ms-Grid-col;
+    width: 90%;
+    position: initial;
+    @include ms-lg10;
+    @include ms-xl8;
+    @include ms-xlPush2;
+    @include ms-lgPush1;
+  }
+
+  .title {
+    @include ms-font-xl;
+    @include ms-fontColor-white;
+  }
+
+  .subTitle {
+    text-align: center;
+    vertical-align: middle;
+    @include ms-font-l;
+    @include ms-fontColor-white;
+  }
+
+  .description {
+    @include ms-font-l;
+    @include ms-fontColor-white;
+  }
+
+  .button2 {
+    margin-left: 2%;
+    height: 50px;
+    width: 50px;
+    text-align: center;
+    vertical-align: middle;
+    border: none;
+    border-radius: 50%;
+    background-color: #00897b;
+  }
+  .button2 i, .button2 span {
+    color: white;
+    font-size: 18pt;
+    font-weight: 500;
+  }
+  .button {
+    // Our button
+    text-decoration: none;
+    height: 32px;
+
+    // Primary Button
+    min-width: 80px;
+    background-color: $ms-color-themePrimary;
+    border-color: $ms-color-themePrimary;
+    color: $ms-color-white;
+
+    // Basic Button
+    outline: transparent;
+    position: relative;
+    font-family: "Segoe UI WestEuropean","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: $ms-font-size-m;
+    font-weight: $ms-font-weight-regular;
+    border-width: 0;
+    text-align: center;
+    cursor: pointer;
+    display: inline-block;
+    padding: 0 16px;
+
+    .label {
+      font-weight: $ms-font-weight-semibold;
+      font-size: $ms-font-size-m;
+      height: 32px;
+      color: white;
+      line-height: 32px;
+      margin: 0 4px;
+      vertical-align: top;
+      display: inline-block;
+    }
+  }
+}
