@@ -30,6 +30,7 @@ export interface IRwBaseChatWebPartProps {
   list: string;
   title: string;
   background: string;
+  allowhyperlinks: boolean;
   interval: any;
   autofetch: boolean;
 }
@@ -274,7 +275,19 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
   }
 
   public _addToList(zeit, user, message) {
-    SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/items", payload:{Zeit: zeit, User: user, Message: message}}).then(r=>console.log(r));
+    var checkedMessage = this._checkXSS(message);
+    SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/items", payload:{Zeit: zeit, User: user, Message: checkedMessage}}).then(r=>console.log(r));
+  }
+
+  public _checkXSS(message) {
+    message = message.replace("<(|\/|[^\/>][^>]+|\/[^>][^>]+)>", "");
+    if (this.properties.allowhyperlinks) {
+      var hyperlinks = message.match("^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/gm");
+      hyperlinks.forEach(url => {
+        message = message.replace(url, '<a href="'+url+'">'+url+'</a>');
+      });
+    }
+    return message;
   }
   
 
@@ -397,6 +410,10 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
               }),
               PropertyPaneCheckbox('autofetch', {
                 text: 'Neue Nachrichten automatisch laden',
+                checked: true
+              }),
+              PropertyPaneCheckbox('allowhyperlinks', {
+                text: 'Links in Nachrichten erlauben',
                 checked: false
               }),
               // Abrufintervall in Millisekunden
