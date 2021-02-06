@@ -13,6 +13,7 @@
   },
   "externals": {},
   "localizedResources": {
-    "RwBaseChatWebPartStrings": "lib/webparts/rwBaseChat/loc/{locale}.js"
+    "RwBaseChatWebPartStrings": "lib/webparts/rwBaseChat/loc/{locale}.js",
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js"
   }
 }

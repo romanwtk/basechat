@@ -1,4 +1,5 @@
 import { Version } from '@microsoft/sp-core-library';
+import { PropertyFieldColorPicker, PropertyFieldColorPickerStyle } from '@pnp/spfx-property-controls/lib/PropertyFieldColorPicker';
 import {
   IPropertyPaneConfiguration,
   PropertyPaneTextField,
@@ -33,6 +34,7 @@ export interface IRwBaseChatWebPartProps {
   allowhyperlinks: boolean;
   interval: any;
   autofetch: boolean;
+  emojiset: string;
 }
 
 export interface ISPLists {
@@ -140,29 +142,24 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
             <div id="emojibar" class="${styles.emojibar}">
               <!-- Alle Emojis sind Unicode-Symbole -->
               <button class="${styles.emoji}">😂</button>
-              <button class="${styles.emoji}">😅</button>
-              <button class="${styles.emoji}">😉</button>
-              <button class="${styles.emoji}">😇</button>
-              <button class="${styles.emoji}">😍</button>
-              <button class="${styles.emoji}">😜</button>
-              <button class="${styles.emoji}">🤗</button>
-              <button class="${styles.emoji}">🥳</button>
-              <button class="${styles.emoji}">😔</button>
-              <button class="${styles.emoji}">🔥</button>
-              <button class="${styles.emoji}">⛺</button>
-              <button class="${styles.emoji}">🎪</button>
-              <button class="${styles.emoji}">⏳</button>
-              <button class="${styles.emoji}">💗</button>
-              <button class="${styles.emoji}">👋</button>
-              <button class="${styles.emoji}">👏</button>
-              <button class="${styles.emoji}">🦜</button>
-              <button class="${styles.emoji}">🎉</button>
-              <button class="${styles.emoji}">🎨</button>
-              <button class="${styles.emoji}">🎶</button>
             </div>
           </div>
         </div>
       </div>`;
+
+      let emojiSet = this.properties.emojiset;
+      try {
+        let emojis = emojiSet.split(";");
+        let emojihtml = '';
+        emojis.forEach(em => {
+          emojihtml += '<button class="'+styles.emoji+'">'+em+'</button>';
+        });
+        const emojibar: Element = this.domElement.querySelector('#emojibar');
+          emojibar.innerHTML = emojihtml;
+      }
+      catch {
+        //
+      }
     
     // Bei Klick auf den "Sende"-Button (Briefumschlag) wird die Funktion _getMessage() aufgerufen
     let btnSubmit = this.domElement.querySelector("#submit");
@@ -186,11 +183,11 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
     let btnEmoji = this.domElement.querySelector("#emoji");
     btnEmoji.addEventListener("click", (e:Event) => {
       if (this.domElement.querySelector("#emojibar").classList.contains(styles.emojibar)) {
-        this.domElement.querySelector("#emojibar").classList.add(styles.emojibarOpen)
+        this.domElement.querySelector("#emojibar").classList.add(styles.emojibarOpen);
         this.domElement.querySelector("#emojibar").classList.remove(styles.emojibar);
       }
       else {
-        this.domElement.querySelector("#emojibar").classList.add(styles.emojibar)
+        this.domElement.querySelector("#emojibar").classList.add(styles.emojibar);
         this.domElement.querySelector("#emojibar").classList.remove(styles.emojibarOpen);
       }
     });
@@ -210,7 +207,7 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
 
   // Ansatz für ie Antwortfunktion - nicht fertiggestellt
   public setAnswer(reference) {
-    console.log("You're triggered!")
+    console.log("You're triggered!");
     let txaMessage = this.domElement.querySelector('textarea');
     txaMessage.value += '<a href="#'+reference+'">Antwort</a>';
   }
@@ -232,8 +229,8 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
     let time = new Date().toLocaleString();
 
     // Log-Funktion zu Testzwecken
-    console.log(time + ' - ' + user + ' - ' + message);
-    let msgstream = {time: time, user: user, message: message};
+    console.log(time + ' - ' + user + ' - ' + this._checkXSS(message));
+    let msgstream = {time: time, user: user, message: this._checkXSS(message)};
     let msgjson = JSON.stringify(msgstream);
     
     // Consolenausgabe:
@@ -280,14 +277,23 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
   }
 
   public _checkXSS(message) {
-    message = message.replace("<(|\/|[^\/>][^>]+|\/[^>][^>]+)>", "");
+    var expr = /<(|\/|[^\/>][^>]+|\/[^>][^>]+)>/gi;
+    var message_new = message.replace(expr, "");
     if (this.properties.allowhyperlinks) {
-      var hyperlinks = message.match("^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/gm");
-      hyperlinks.forEach(url => {
-        message = message.replace(url, '<a href="'+url+'">'+url+'</a>');
-      });
+      var regex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+      var hyperlinks = [];
+      hyperlinks = message.match(regex);
+      if (typeof hyperlinks !== 'undefined' && hyperlinks != null) {
+        hyperlinks.forEach(url => {
+          console.log(message_new);
+          message_new = message_new.replace(url, '<a href="'+url+'">'+url+'</a>');
+        });
+      }
+      else {
+        console.log(message_new);
+      }
     }
-    return message;
+    return message_new;
   }
   
 
@@ -296,7 +302,7 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
   */
   public async _setFieldTypes() {
     
-      console.log("Felder noch nicht erstellt.")
+      console.log("Felder noch nicht erstellt.");
       SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/fields", 
       payload: { "FieldTypeKind": 2,"Title": "Zeit", "Required": "true"}, 
       hdrs:  { 
@@ -352,7 +358,7 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
         html += `
         <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
           <div class="${styles.txt}">
-            <p class="${styles.message}" style="text-align: right;">${item.Message}</p><br>
+            <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
             <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
           </div>
         </div>`;
@@ -416,6 +422,10 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
                 text: 'Links in Nachrichten erlauben',
                 checked: false
               }),
+              PropertyPaneTextField('emojiset', {
+                label: strings.EmojisetFieldLabel,
+                value: '😅'
+              }),
               // Abrufintervall in Millisekunden
               PropertyPaneTextField('interval', {
                 label: strings.IntervalFieldLabel
@@ -425,8 +435,17 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
           {
             groupName: strings.StyleGroupName,
             groupFields: [
-              PropertyPaneTextField('background', {
-                label: strings.BackgroundFieldLabel
+              PropertyFieldColorPicker('background', {
+                label: strings.BackgroundFieldLabel,
+                selectedColor: this.properties.background,
+                onPropertyChange: this.onPropertyPaneFieldChanged,
+                properties: this.properties,
+                disabled: false,
+                isHidden: false,
+                alphaSliderHidden: false,
+                style: PropertyFieldColorPickerStyle.Full,
+                iconName: 'Precipitation',
+                key: 'background'
               })
             ]
           }

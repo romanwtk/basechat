@@ -6,6 +6,7 @@ define([], function() {
     "StyleGroupName": "Layout",
     "TitleFieldLabel": "Titel des Chats",
     "BackgroundFieldLabel": "Hintergrund des Webparts",
-    "IntervalFieldLabel": "Abrufintervall in Millisekunden"
+    "IntervalFieldLabel": "Abrufintervall in Millisekunden",
+    "EmojisetFieldLabel": "Gewünschte Emojis für die Emojibar"
   }
 });
