@@ -7,6 +7,7 @@ declare interface IRwBaseChatWebPartStrings {
   BackgroundFieldLabel: string;
   IntervalFieldLabel: string;
   EmojisetFieldLabel: string;
+  ModeratorsFieldLabel: string;
 }
 
 declare module 'RwBaseChatWebPartStrings' {

@@ -7,6 +7,7 @@ define([], function() {
     "TitleFieldLabel": "Titel des Chats",
     "BackgroundFieldLabel": "Hintergrund des Webparts",
     "IntervalFieldLabel": "Abrufintervall in Millisekunden",
-    "EmojisetFieldLabel": "Gewünschte Emojis für die Emojibar"
+    "EmojisetFieldLabel": "Gewünschte Emojis für die Emojibar",
+    "ModeratorsFieldLabel": "Moderatoren"
   }
 });

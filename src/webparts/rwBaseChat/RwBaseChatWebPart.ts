@@ -1,5 +1,8 @@
 import { Version } from '@microsoft/sp-core-library';
 import { PropertyFieldColorPicker, PropertyFieldColorPickerStyle } from '@pnp/spfx-property-controls/lib/PropertyFieldColorPicker';
+import { PropertyFieldPeoplePicker, PrincipalType } from '@pnp/spfx-property-controls/lib/PropertyFieldPeoplePicker';
+import { IPropertyFieldGroupOrPerson } from "@pnp/spfx-property-controls/lib/PropertyFieldPeoplePicker";
+
 import {
   IPropertyPaneConfiguration,
   PropertyPaneTextField,
@@ -32,6 +35,7 @@ export interface IRwBaseChatWebPartProps {
   title: string;
   background: string;
   allowhyperlinks: boolean;
+  moderators: IPropertyFieldGroupOrPerson[];
   interval: any;
   autofetch: boolean;
   emojiset: string;
@@ -296,6 +300,16 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
     return message_new;
   }
   
+  public _isUserModerator() {
+    let currentUser = this.context.pageContext.user;
+    this.properties.moderators.forEach( mod => {
+      console.log(mod.email+' - '+currentUser.email);
+      if (mod.email == currentUser.email) {
+        return true;
+      }
+    });
+    return false;
+  }
 
   /*  Auch hier wird (leider) noch bei jedem Seitenaufruf ein entsprechendes Feld in der Liste erstellt. 
       Daher wird diese Funktion nie aufgerufen. Alle Felder müssen - solange die Funktion nicht fertig ist - manuell in SharePoint hinzugefügt werden.
@@ -349,30 +363,58 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
 
   // Erzeugt für jede Nachricht das entsprechende HTML-Objekt und fügt es in den entsprechenden Bereich hinzu
   private _renderList(items: ISPList[]): void {
+
     messages = items.length;
     let html: string = '';
    
     items.forEach((item: ISPList) => {
-      // Nachrichten, die der Nutzer verschickt, werden messenger-typisch rechtsbünfig und grün angezeigt
-      if (item.User == this.context.pageContext.user.displayName) {
-        html += `
-        <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
-          <div class="${styles.txt}">
-            <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
-            <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
-          </div>
-        </div>`;
+      if (this._isUserModerator()) {
+            // Nachrichten, die der Nutzer verschickt, werden messenger-typisch rechtsbündig und grün angezeigt
+          if (item.User == this.context.pageContext.user.displayName) {
+            html += `
+            <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
+              Moderator
+              <div class="${styles.txt}">
+                <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
+                <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
+              </div>
+            </div>`;
+          }
+          else {
+            // Andere Nachrichten linksbündig und mit weißem Hintergrund
+            html += `
+            <div class="${styles.bubble }">
+              Moderator
+              <div class="${styles.txt}">
+                <p class="${styles.name}">${item.User}</p>
+                <p class="${styles.message}">${item.Message}</p><br>
+                <span class="${styles.timestamp}">${item.Zeit}</span>
+              </div>
+            </div>`;
+          }
       }
       else {
-        // Andere Nachrichten linksbündig und mit weißem Hintergrund
-        html += `
-        <div class="${styles.bubble }">
-          <div class="${styles.txt}">
-            <p class="${styles.name}">${item.User}</p>
-            <p class="${styles.message}">${item.Message}</p><br>
-            <span class="${styles.timestamp}">${item.Zeit}</span>
-          </div>
-        </div>`;
+        // Nachrichten, die der Nutzer verschickt, werden messenger-typisch rechtsbündig und grün angezeigt
+        if (item.User == this.context.pageContext.user.displayName) {
+          html += `
+          <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
+            <div class="${styles.txt}">
+              <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
+              <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
+            </div>
+          </div>`;
+        }
+        else {
+          // Andere Nachrichten linksbündig und mit weißem Hintergrund
+          html += `
+          <div class="${styles.bubble }">
+            <div class="${styles.txt}">
+              <p class="${styles.name}">${item.User}</p>
+              <p class="${styles.message}">${item.Message}</p><br>
+              <span class="${styles.timestamp}">${item.Zeit}</span>
+            </div>
+          </div>`;
+        }
       }
     });
   
@@ -413,6 +455,18 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
               }),
               PropertyPaneTextField('list', {
                 label: strings.ListFieldLabel
+              }),
+              PropertyFieldPeoplePicker('moderators', {
+                label: strings.ModeratorsFieldLabel,
+                initialData: this.properties.moderators,
+                allowDuplicate: false,
+                principalType: [PrincipalType.Users, PrincipalType.SharePoint, PrincipalType.Security],
+                onPropertyChange: this.onPropertyPaneFieldChanged,
+                context: this.context,
+                properties: this.properties,
+                onGetErrorMessage: null,
+                deferredValidationTime: 0,
+                key: 'peopleFieldId'
               }),
               PropertyPaneCheckbox('autofetch', {
                 text: 'Neue Nachrichten automatisch laden',
