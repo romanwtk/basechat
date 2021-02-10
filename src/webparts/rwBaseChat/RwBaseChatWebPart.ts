@@ -301,14 +301,18 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
   }
   
   public _isUserModerator() {
+    let result: boolean;
     let currentUser = this.context.pageContext.user;
     this.properties.moderators.forEach( mod => {
       console.log(mod.email+' - '+currentUser.email);
-      if (mod.email == currentUser.email) {
-        return true;
+      if (String(mod.email) == String(currentUser.email)) {
+        result = true;
+      }
+      else {
+        result = false;
       }
     });
-    return false;
+    return result;
   }
 
   /*  Auch hier wird (leider) noch bei jedem Seitenaufruf ein entsprechendes Feld in der Liste erstellt. 
@@ -373,10 +377,9 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
           if (item.User == this.context.pageContext.user.displayName) {
             html += `
             <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
-              Moderator
               <div class="${styles.txt}">
-                <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
-                <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
+                <p class="${styles.message}" style="text-align: right;">${item.Message}</p><br>
+                <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">DEL</button> - <button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
               </div>
             </div>`;
           }
@@ -388,7 +391,7 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
               <div class="${styles.txt}">
                 <p class="${styles.name}">${item.User}</p>
                 <p class="${styles.message}">${item.Message}</p><br>
-                <span class="${styles.timestamp}">${item.Zeit}</span>
+                <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">DEL</button> - ${item.Zeit}</span>
               </div>
             </div>`;
           }
@@ -420,6 +423,16 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
   
     const listContainer: Element = this.domElement.querySelector('#spListContainer');
     listContainer.innerHTML = html;
+
+    const delete_btns = document.querySelectorAll(".delete");
+    delete_btns.forEach(el => {
+      el.addEventListener('click', event => {
+        console.log("Button click detected!");
+        var target = <HTMLElement> event.target;
+        pnp.sp.web.lists.getByTitle(this.properties.list).items.getById(Number(target.getAttribute('msg'))).delete();
+        console.log("Message deleted.");
+      });
+    });
 
     // Scrollt im Nachrichtenbereich automatisch nach unten
     this.domElement.querySelector('#spListContainer').scrollTo(0,this.domElement.querySelector('#spListContainer').scrollHeight);
