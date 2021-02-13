@@ -41,6 +41,9 @@
       margin: 0 0 15px 30%;
       background: #e1ffc7;
     }
+    &.pinned {
+      background: rgb(238, 182, 255);
+    }
 
     .txt{
       padding: 8px 10px 8px 14px;

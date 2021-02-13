@@ -19,6 +19,7 @@ import jQuery from 'jquery';
 
 // Import der Bibliothek PnPjs - hier in Verwendung für REST-Calls und Listenabfragen
 import { sp } from "@pnp/sp/presets/all";
+import "@pnp/sp/lists";
 import pnp, { List, ListEnsureResult } from "sp-pnp-js";
 
 // Benötigte Imports für HTTP-Requests
@@ -26,9 +27,6 @@ import {
   SPHttpClient,
   SPHttpClientResponse
 } from '@microsoft/sp-http';
-
-// Zum Teil noch verwendete Hilfsbibliothek SPOHelper (siehe Dokumentation)
-import {SPGet, SPDelete, SPPost, SPUpdate} from "./SPOHelper";
 
 export interface IRwBaseChatWebPartProps {
   list: string;
@@ -48,9 +46,11 @@ export interface ISPLists {
 // Definition einer Chatnachricht als Liste
 export interface ISPList {
   Id: string;
-  Zeit: string;
+  Time: string;
   User: string;
   Message: string;
+  AnswerTo: string;
+  Pinned: string;
 }
 
 export interface IField {
@@ -124,7 +124,7 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
       <div class="${ styles.rwBaseChat }">
         <div class="${ styles.container }" >
           <div class="${ styles.row }" style="background-color: ${this.properties.background};">
-            <span class="${ styles.title}">${escape(this.properties.title)}</span><br><br>
+            <p class="${ styles.title}">${escape(this.properties.title)}<div id="spPinnedContainer"></div></p><br>
             <div id="spListContainer" style="max-height: 300px; overflow: auto; background-color: ${this.properties.background}" />
             <bR>
             <bR>
@@ -260,24 +260,13 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
       
       Bitte bei Zeiten unbedingt fertigstellen, um die Netzlast zu verringern!
   */ 
-  public checkListCreation(list): boolean {
-    var isListCreated;
-    pnp.sp.web.lists.ensure(list, 'basechat-list').then((answer: ListEnsureResult) => {
-      if (answer.created == true) {
-        this._setFieldTypes();
-        isListCreated = false;
-      }
-      else {
-        console.log("Die Liste " + list + " existierte bereits.");
-        isListCreated = true;
-      }
-    });
-    return isListCreated;
+  public checkListCreation(list) {
+    this._createList();
   }
 
   public _addToList(zeit, user, message) {
     var checkedMessage = this._checkXSS(message);
-    SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/items", payload:{Zeit: zeit, User: user, Message: checkedMessage}}).then(r=>console.log(r));
+    pnp.sp.web.lists.getByTitle(this.properties.list).items.add({Time: zeit, User: user, Message: checkedMessage}).then(r=> console.log(r));
   }
 
   public _checkXSS(message) {
@@ -319,42 +308,72 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
       Daher wird diese Funktion nie aufgerufen. Alle Felder müssen - solange die Funktion nicht fertig ist - manuell in SharePoint hinzugefügt werden.
   */
   public async _setFieldTypes() {
-    
-      console.log("Felder noch nicht erstellt.");
-      SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/fields", 
-      payload: { "FieldTypeKind": 2,"Title": "Zeit", "Required": "true"}, 
-      hdrs:  { 
-      "accept": "application/json;odata=verbose",
-      "content-type": "application/json;odata=verbose",
-    }}).then(r=>console.log(r));
-
-    SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/fields", 
-      payload: { "FieldTypeKind": 2,"Title": "User", "Required": "true"}, 
-      hdrs:  { 
-      "accept": "application/json;odata=verbose",
-      "content-type": "application/json;odata=verbose",
-    }}).then(r=>console.log(r));
-
-    SPPost({url: this.context.pageContext.web.absoluteUrl + "/_api/web/lists/getbytitle('"+listName+"')/fields", 
-      payload: { "FieldTypeKind": 2,"Title": "Message", "Required": "true"}, 
-      hdrs:  { 
-      "accept": "application/json;odata=verbose",
-      "content-type": "application/json;odata=verbose",
-    }}).then(r=>console.log(r));
+    let isTimeThere = false;
+    let isUserThere = false;
+    let isMessageThere = false;
+    let isAnswertoThere = false;
+    let isPinnedThere = false;
+    pnp.sp.web.lists.getByTitle(this.properties.list).fields.get().then(fields => {
+      fields.forEach(field => {
+        if (field.Title == "Time") {
+          isTimeThere = true;
+        }
+        else if (field.Title == "User") {
+          isUserThere = true;
+        }
+        else if (field.Title == "Message") {
+          isMessageThere = true;
+        }
+        else if (field.Title == "AnswerTo") {
+          isAnswertoThere = true;
+        }
+        else if (field.Title == "Pinned") {
+          isPinnedThere = true;
+        }
+      });
+    }).then(async fields => {
+        if (!isTimeThere) {
+          pnp.sp.web.lists.getByTitle(this.properties.list).fields.add("Time", "SP.FieldText", {"FieldTypeKind": 2, "Required": true}).then(async r => {
+            if (!isUserThere) {
+              pnp.sp.web.lists.getByTitle(this.properties.list).fields.add("User", "SP.FieldText", {"FieldTypeKind": 2, "Required": true}).then(async r2 => {
+                if (!isMessageThere) {
+                  pnp.sp.web.lists.getByTitle(this.properties.list).fields.add("Message", "SP.FieldText", {"FieldTypeKind": 2, "Required": true}).then(async r3 => {
+                    if (!isAnswertoThere) {
+                      pnp.sp.web.lists.getByTitle(this.properties.list).fields.add("AnswerTo", "SP.FieldText", {"FieldTypeKind": 2, "Required": false}).then(async r4 => {
+                        if (!isPinnedThere) {
+                          pnp.sp.web.lists.getByTitle(this.properties.list).fields.add("Pinned", "SP.FieldText", {"FieldTypeKind": 2, "Required": false});
+                        }
+                      });
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+    });
   }
 
   // Erstellt die Liste über PnPjs
   // Der Wunsch, dass die Liste nur dann erstellt wird, wenn sie noch nicht existiert, ist auch hier noch nciht lauffähig. 
   public async _createList() {
-    const listEnsureResult = await sp.web.lists.ensure(this.properties.list);
-    if (listEnsureResult.created) {
-        console.log("Die Liste wurde bereits angelegt!");
+    var listExists: boolean = false;
+    pnp.sp.web.lists.get().then(lists => {
+      lists.forEach(async list => {
+        console.log(String(list.Title)+"--"+String(this.properties.list));
+        if (String(list.Title) == String(this.properties.list)) {
+          listExists = true;
+        }
+      });
+    }).then(r => {console.log("listExists: "+listExists);}).then(async r => {
+      if (listExists == false) {
+        pnp.sp.web.lists.add(this.properties.list, 'basechat-list', 100, true).then(async r2 => {
+          await this._setFieldTypes();
+        }
+        );
+      }
     }
-    else {
-        console.log("Die Liste wurde noch nicht angelegt. Ich hole das jetzt nach!");
-        SPPost({url: this.context.pageContext.web.absoluteUrl + '/_api/web/lists', payload:{Title : listName, BaseTemplate: 120, Description: 'Chat-Dommunication-database'}
-        });
-    }
+    );
   }
   
   // Lädt die Nachrichten in der Liste über einen REST-API-Call herunter.
@@ -370,67 +389,132 @@ export default class RwBaseChatWebPart extends BaseClientSideWebPart <IRwBaseCha
 
     messages = items.length;
     let html: string = '';
+    let htmlPinned: string = '';
    
     items.forEach((item: ISPList) => {
       if (this._isUserModerator()) {
             // Nachrichten, die der Nutzer verschickt, werden messenger-typisch rechtsbündig und grün angezeigt
           if (item.User == this.context.pageContext.user.displayName) {
-            html += `
-            <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
-              <div class="${styles.txt}">
-                <p class="${styles.message}" style="text-align: right;">${item.Message}</p><br>
-                <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">DEL</button> - <button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
-              </div>
-            </div>`;
+            if (!item.Pinned) {
+              html += `
+              <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
+                <div class="${styles.txt}">
+                  <p class="${styles.message}" style="text-align: right;">${item.Message}</p><br>
+                  <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">🗑</button> - <button class="pin ${styles.del_btn}" msg="${item.Id}">📌</button> - <button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Time}</span>
+                </div>
+              </div>`;
+            }
+            else {
+              htmlPinned += `
+              <div class="${styles.bubble } ${styles.alt} ${styles.pinned}" id="msg_${item.Id}">
+                <div class="${styles.txt}">
+                  <p class="${styles.message}" style="text-align: right;">${item.Message}</p><br>
+                  <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">🗑</button> - <button class="pin ${styles.del_btn}" msg="${item.Id}">📌</button> - <button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Time}</span>
+                </div>
+              </div>`;
+            }
           }
           else {
             // Andere Nachrichten linksbündig und mit weißem Hintergrund
+            if (!item.Pinned) {
             html += `
             <div class="${styles.bubble }">
-              Moderator
               <div class="${styles.txt}">
                 <p class="${styles.name}">${item.User}</p>
                 <p class="${styles.message}">${item.Message}</p><br>
-                <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">DEL</button> - ${item.Zeit}</span>
+                <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">🗑</button> - <button class="pin ${styles.del_btn}" msg="${item.Id}">📌</button> - ${item.Time}</span>
               </div>
             </div>`;
+            }
+            else {
+              htmlPinned += `
+              <div class="${styles.bubble } ${styles.pinned}">
+                <div class="${styles.txt}">
+                  <p class="${styles.name}">${item.User}</p>
+                  <p class="${styles.message}">${item.Message}</p><br>
+                  <span class="${styles.timestamp}"><button class="delete ${styles.del_btn}" msg="${item.Id}">🗑</button> - <button class="pin ${styles.del_btn}" msg="${item.Id}">📌</button> - ${item.Time}</span>
+                </div>
+              </div>`;
+            }
           }
       }
       else {
         // Nachrichten, die der Nutzer verschickt, werden messenger-typisch rechtsbündig und grün angezeigt
         if (item.User == this.context.pageContext.user.displayName) {
-          html += `
-          <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
-            <div class="${styles.txt}">
-              <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
-              <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Zeit}</span>
-            </div>
-          </div>`;
+          if (!item.Pinned) {
+            html += `
+            <div class="${styles.bubble } ${styles.alt}" id="msg_${item.Id}">
+              <div class="${styles.txt}">
+                <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
+                <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Time}</span>
+              </div>
+            </div>`;
+          }
+          else {
+            htmlPinned += `
+            <div class="${styles.bubble } ${styles.alt} ${styles.pinned}" id="msg_${item.Id}">
+              <div class="${styles.txt}">
+                <p class="${styles.message}" style="text-align: right;">${escape(item.Message)}</p><br>
+                <span class="${styles.timestamp}"><button class="${styles.answer}" id="msg_${item.Id}">Antworten</button> ${item.Time}</span>
+              </div>
+            </div>`;
+          }
+          
         }
         else {
           // Andere Nachrichten linksbündig und mit weißem Hintergrund
-          html += `
-          <div class="${styles.bubble }">
-            <div class="${styles.txt}">
-              <p class="${styles.name}">${item.User}</p>
-              <p class="${styles.message}">${item.Message}</p><br>
-              <span class="${styles.timestamp}">${item.Zeit}</span>
-            </div>
-          </div>`;
+          if (!item.Pinned) {
+            html += `
+            <div class="${styles.bubble }">
+              <div class="${styles.txt}">
+                <p class="${styles.name}">${item.User}</p>
+                <p class="${styles.message}">${item.Message}</p><br>
+                <span class="${styles.timestamp}">${item.Time}</span>
+              </div>
+            </div>`;
+          }
+          else {
+            htmlPinned += `
+            <div class="${styles.bubble } ${styles.pinned}">
+              <div class="${styles.txt}">
+                <p class="${styles.name}">${item.User}</p>
+                <p class="${styles.message}">${item.Message}</p><br>
+                <span class="${styles.timestamp}">${item.Time}</span>
+              </div>
+            </div>`;
+          }
+          
         }
       }
     });
   
     const listContainer: Element = this.domElement.querySelector('#spListContainer');
+    const pinnedContainer: Element = this.domElement.querySelector('#spPinnedContainer');
     listContainer.innerHTML = html;
+    pinnedContainer.innerHTML = htmlPinned;
 
     const delete_btns = document.querySelectorAll(".delete");
+    const pin_btns = document.querySelectorAll(".pin");
     delete_btns.forEach(el => {
       el.addEventListener('click', event => {
-        console.log("Button click detected!");
         var target = <HTMLElement> event.target;
         pnp.sp.web.lists.getByTitle(this.properties.list).items.getById(Number(target.getAttribute('msg'))).delete();
-        console.log("Message deleted.");
+      });
+    });
+    pin_btns.forEach(el => {
+      el.addEventListener('click', event => {
+        var target = <HTMLElement> event.target;
+        pnp.sp.web.lists.getByTitle(this.properties.list).items.getAll().then(async r => {
+          r.forEach(message => {
+            if (Number(message.Id) == Number(target.getAttribute('msg'))) {
+              pnp.sp.web.lists.getByTitle(this.properties.list).items.getById(Number(target.getAttribute('msg'))).update({Pinned: 'true'});
+            }
+            else {
+              pnp.sp.web.lists.getByTitle(this.properties.list).items.getById(Number(message.Id)).update({Pinned: ''});
+            }
+          });
+        });
+        console.log("Message pinned.");
       });
     });
 
